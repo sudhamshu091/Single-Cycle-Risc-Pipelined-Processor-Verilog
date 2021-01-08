@@ -3,6 +3,7 @@
 // data output width: 1 32-bit and one "zero" output
 // control: 4-bit
 // zero: output 1 if all bits of data output is 0
+
 module alu (in_a, in_b, alu_out, zero, control);
 	input [31:0] in_a, in_b;
 	output [31:0] alu_out;
