@@ -94,18 +94,18 @@ module pipeline_single_cycle (fastclk, reset, swith_select, switch_run, cathode,
 	// output processor clock (1 Hz or freeze) to a LED
 	assign ledindicator = clk;
 	// if stage
-	Program_Counter program_counter1 (.clk(clk), .reset(reset), .pc_in(pc_in_origin_al[6:0]), .p_c_out(p_c_out_short), .pcwrite(pcwrite));
+	program_counter program_counter1 (.clk(clk), .reset(reset), .pc_in(pc_in_origin_al[6:0]), .p_c_out(p_c_out_short), .pcwrite(pcwrite));
 	Instruction_memory instruction_memory1 (.read_addr(p_c_out_short), .instruction(instruction), .reset(reset));
-	assign p_c_out_unsign_extended = {26'b0000_0000_0000_0000_0000_0000_0, p_c_out_short}; // from 7 bits to 32 bits
-	alu_add_only alu_add_only1 (.in_a(p_c_out_unsign_extended), .in_b(32'b0100), .ad_d_out(pc_plus4)); // pc + 4
+	assign p_c_out_unsign_extended = {26'b0000_0000_0000_0000_0000_0000_0, p_c_out_short}; 					// from 7 bits to 32 bits
+	alu_add_only alu_add_only1 (.in_a(p_c_out_unsign_extended), .in_b(32'b0100), .ad_d_out(pc_plus4)); 			// pc + 4
 	mux_N_bit #(32) mux_N_bit1 (.in0(pc_plus4), .in1(branch_jump_addr), .mux_out(pc_in_origin_al), .control(pcsrc));
 	if_id_stage_reg if_id_stage_reg1(.pc_plus4_in(pc_plus4), .pc_plus4_out(if_id_pc_plus4), .instruction_in(instruction), .instruction_out(if_id_instruction), .if_id_write(if_id_write), .if_flush(if_flush), .clk(clk), .reset(reset));
 	// id stage
 	register_file register_file1 (.read_addr_1(multi_purpose_read_addr), .read_addr_2(if_id_instruction[20:16]), .write_addr(mem_wb_register_rd), .read_data_1(reg_read_data_1), .read_data_2(reg_read_data_2), .write_data(reg_write_data), .regwrite(multi_purpose_regwrite), .clk(clkrf), .reset(reset));
 	sign_extension sign_extension1 (.sign_in(if_id_instruction[15:0]), .sign_out(immi_sign_extended));
-		// jump within id stage
+	// jump within id stage
 	jump_shiftleft2 jump_shift (.shift_in(if_id_instruction[25:0]), .shift_out(jump_base28));
-	assign jump_addr = {if_id_pc_plus4[31:28], jump_base28}; // jump_addr = (pc+4)[31:28] joined with jump_base28[27:0]
+	assign jump_addr = {if_id_pc_plus4[31:28], jump_base28}; 								// jump_addr = (pc+4)[31:28] joined with jump_base28[27:0]
 	control control1 (.opcode(if_id_instruction[31:26]), .reg_dest(reg_dest), .jump(jump), .branch(branch), .memread(memread), .memtoreg(memtoreg), .aluop(aluop), .memwrite(memwrite), .alusrc(alusrc), .regwrite(regwrite));
 	id_ex_stage_reg id_ex_stage_reg1 (.id_flush_lwstall(id_flush_lwstall), .id_flush_branch(id_flush_branch), .regwrite_in(regwrite), .memtoreg_in(memtoreg), .regwrite_out(id_ex_regwrite), .memtoreg_out(id_ex_memtoreg), .branch_in(branch), .memread_in(memread), .memwrite_in(memwrite), .jump_in(jump), .branch_out(id_ex_branch), .memrea_d_out(id_ex_memread), 
 	.memwrite_out(id_ex_memwrite), .jump_out(id_ex_jump), .reg_dest_in(reg_dest), .alusrc_in(alusrc), .reg_dest_out(id_ex_reg_dest), .aluSr_c_out(id_ex_alusrc), .aluop_in(aluop), .aluop_out(id_ex_aluop), .jump_addr_in(jump_addr), .pc_plus4_in(if_id_pc_plus4), .jump_addr_out(id_ex_jump_addr), .pc_plus4_out(id_ex_pc_plus4),
@@ -113,13 +113,13 @@ module pipeline_single_cycle (fastclk, reset, swith_select, switch_run, cathode,
 	.if_id_registerrt_in(if_id_instruction[20:16]), .if_id_registerrd_in(if_id_instruction[15:11]), .if_id_register_rs_out(id_ex_register_rs), .if_id_registerrt_out(id_ex_registerrt), .if_id_registerr_d_out(id_ex_registerrd), .if_id_funct_in(if_id_instruction[5:0]),.if_id_funct_out(id_ex_funct),.clk(clk), .reset(reset));//Ou adds  if_id_funct_in and out
 	// ex stage
 	mux_N_bit #(5) mux_N_bit_6 (.in0(id_ex_registerrt), .in1(id_ex_registerrd), .mux_out(ex_registerrd), .control(id_ex_reg_dest));
-	alucontrol alucontrol1 (.aluop(id_ex_aluop), .funct(id_ex_funct), .out_to_alu(out_to_alu));// Ou modifies: funct should not be if_id_instruction. Rather, it should be id_ex_funct(a new wire)
+	alucontrol alucontrol1 (.aluop(id_ex_aluop), .funct(id_ex_funct), .out_to_alu(out_to_alu));				// Ou modifies: funct should not be if_id_instruction. Rather, it should be id_ex_funct(a new wire)
 	mux_32bit_3to1 mux_a1 (.in00(id_ex_reg_read_data_1), .in01(reg_write_data), .in10(ex_mem_alu_result), .mux_out(mux_a_out), .control(forward_a));
 	mux_32bit_3to1 mux_b1 (.in00(id_ex_reg_read_data_2), .in01(reg_write_data), .in10(ex_mem_alu_result), .mux_out(mux_b_out), .control(forward_b));//Ou modifies: keep the structure paralleled with muxA
 	mux_N_bit #(32) mux_N_bit2 (.in0(mux_b_out), .in1(id_ex_immi_sign_extended), .mux_out(after_alusrc), .control(id_ex_alusrc));
 	alu alu1 (.in_a(mux_a_out), .in_b(after_alusrc), .alu_out(alu_result), .zero(alu_zero), .control(out_to_alu));
 	branch_shiftleft2 branch_shift1 (.shift_in(id_ex_immi_sign_extended), .shift_out(after_shift));
-	alu_add_only alu_add_only2 (.in_a(id_ex_pc_plus4), .in_b(after_shift), .ad_d_out(branch_addr)); // (pc+4) + branch_addition*4Z
+	alu_add_only alu_add_only2 (.in_a(id_ex_pc_plus4), .in_b(after_shift), .ad_d_out(branch_addr)); 			// (pc+4) + branch_addition*4Z
 	// in ex/mem stage reg, note mux_b_out is used in the place of reg_read_data_2 as a result of forwarding;ygb 
 	ex_mem_stage_reg ex_mem_stage_reg1 (.ex_flush(ex_flush), .regwrite_in(id_ex_regwrite), .memtoreg_in(id_ex_memtoreg), .regwrite_out(ex_mem_regwrite), .memtoreg_out(ex_mem_mem_to_reg),
 	.branch_in(id_ex_branch), .memread_in(id_ex_memread), .memwrite_in(id_ex_memwrite),
@@ -144,7 +144,7 @@ module pipeline_single_cycle (fastclk, reset, swith_select, switch_run, cathode,
 	// ssd Display
 	divide_by_100k clock500HZ (.clock(fastclk), .reset(reset), .clock_out(clkssd));
 	divide_by_500  clock1HZ (.clock(clkssd), .reset(reset), .clock_out(clknormal));
-	Ring_4_counter Ring_Counter (.clock(clkssd), .reset(reset), .q(an));
+	ring_counter4 ring_counter1 (.clock(clkssd), .reset(reset), .q(an));
 	ssd_driver	ssdtho (.in_bcd(tho), .out_ssd(thossd));
 	ssd_driver	ssdhun (.in_bcd(hun), .out_ssd(hunssd));
 	ssd_driver	ssdten (.in_bcd(ten), .out_ssd(tenssd));
@@ -163,22 +163,22 @@ module pipeline_single_cycle (fastclk, reset, swith_select, switch_run, cathode,
 	always @(switch_run or clkssd) begin
 		if (switch_run) begin
 			// sys status 1: run pipeline_single_cycle processor
-			clkrf_reg <= clknormal;		// 1 Hz
-			clk_reg <= clknormal;		// 1 Hz
-			multi_purpose_read_addr_reg <= if_id_instruction[25:21]; // reg-file-port1 reads from instruction
+			clkrf_reg <= clknormal;							// 1 Hz
+			clk_reg <= clknormal;							// 1 Hz
+			multi_purpose_read_addr_reg <= if_id_instruction[25:21]; 		// reg-file-port1 reads from instruction
 			// reg-file protection measure; explained in "else"
 			multi_purpose_regwrite_reg <= mem_wb_regwrite;
 			// output pc to ssd, but since pc only has 6 bits
-			tho_reg <= p_c_out_unsign_extended[15:12];	// always 0
-			hun_reg <= p_c_out_unsign_extended[11:8];	// always 0
+			tho_reg <= p_c_out_unsign_extended[15:12];				// always 0
+			hun_reg <= p_c_out_unsign_extended[11:8];				// always 0
 			ten_reg <= p_c_out_unsign_extended[7:4];
 			one_reg <= p_c_out_unsign_extended[3:0];
 		end
 		else begin
 			// sys status 2: pause processor; inspect reg file content
-			clkrf_reg <= clkssd;	// 500 Hz
-			clk_reg <= 1'b0;		// freeze at 0
-			multi_purpose_read_addr_reg <= swith_select; // reg-file-port1 reads from swith_select
+			clkrf_reg <= clkssd;							// 500 Hz
+			clk_reg <= 1'b0;							// freeze at 0
+			multi_purpose_read_addr_reg <= swith_select; 				// reg-file-port1 reads from swith_select
 			// reg-file is not freezed in time, this protects against RF-data-overwrite
 			multi_purpose_regwrite_reg <= 1'b0;
 			// output reg file content to ssd, but only the lower 16 bits (we only have 4 ssd)
