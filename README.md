@@ -10,4 +10,4 @@ Below image is the Risc processor I am trying to impleent, But end product may n
 ![](single_cycle.png)
 
 [Waveform](single_cycle.jpg)
-![](single_cycle.jpg)
+![](pipeline_single_cycle.jpg)
